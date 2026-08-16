@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b1f3a">
+<title>Estadísticas de Pádel</title>
+<style>
+:root{--navy:#0b1115;--green:#49df69;--red:#ff6b6b;--bg:#080c0f;--card:#101519;--border:#263038;--text:#f4f6f7;--muted:#8e9aa2}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:1180px;margin:auto;padding:14px}.box{background:linear-gradient(145deg,#11181d,#0e1418);border:1px solid var(--border);border-radius:16px;padding:16px}
+h1{margin:0;color:#fff}.sub{color:var(--green);font-weight:800;margin-top:4px}
+.names,.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.names{margin-top:14px}
+label{font-size:13px;font-weight:700}input{width:100%;margin-top:5px;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:16px;background:#0d1317;color:#fff}
+.stats{margin:14px 0}.stat{background:#101519;border:1px solid var(--border);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:22px;color:var(--green)}
+.table{overflow:auto;background:#101519;border:1px solid var(--border);border-radius:16px}table{width:100%;border-collapse:collapse;min-width:900px}
+th,td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:8px;text-align:center}
+th:first-child,td:first-child{position:sticky;left:0;background:#101519;z-index:2;text-align:left;font-weight:700}
+thead th{background:#151d22;color:#fff;position:sticky;top:0;z-index:3}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}button{font-size:18px;font-weight:800;padding:12px 8px;border-radius:10px;border:1px solid var(--border);background:#141b20;color:#fff;touch-action:manipulation}
+.ok{color:var(--green)}.bad{color:var(--red)}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.primary{background:#1b242a;color:#fff}
+.summary{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}.sum{background:#101519;border:1px solid var(--border);border-radius:14px;padding:12px}.msg{min-height:22px;color:var(--muted);margin:10px 2px}
+.insights{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}.insight{background:#101519;border:1px solid var(--border);border-radius:14px;padding:12px}.insight h3{margin:0 0 8px;color:var(--green);font-size:16px}.insight ul{margin:0;padding-left:18px}.insight li{margin:4px 0}.footer{text-align:center;color:var(--muted);font-size:13px;margin:16px}
+@media(max-width:760px){.names,.stats{grid-template-columns:repeat(2,1fr)}.summary,.insights{grid-template-columns:1fr}}
+
+.finishbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.finish{background:var(--green);color:#071009;border-color:var(--green)}
+.reportOverlay{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;padding:20px;z-index:999}
+.reportOverlay.show{display:flex}.reportBox{width:min(980px,100%);max-height:92vh;overflow:auto;background:#f5f7f8;color:#172033;border-radius:16px;padding:20px}
+.reportTop{display:flex;align-items:center;gap:10px;margin-bottom:12px}.reportTop h2{margin:0;color:#0b2447}.reportTop .spacer{flex:1}
+.reportBtn{background:#0b2447;color:white;border:0;border-radius:8px;padding:9px 12px;font-size:14px;cursor:pointer}.reportBtn.green{background:#16803c}
+.reportHeader{background:#0b2447;color:white;border-radius:12px;padding:18px}.reportHeader small{color:#cbd7df}
+.reportPlayers{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}.reportPlayer{background:white;border:1px solid #d5dbe3;border-radius:10px;padding:12px}
+.reportPlayer h3{margin:0 0 8px;color:#0b2447}.reportTable{width:100%;border-collapse:collapse;margin-top:10px}.reportTable th,.reportTable td{border:1px solid #d5dbe3;padding:7px;text-align:center}.reportTable th{background:#eef2f6;color:#0b2447}
+.reportInsight{margin-top:8px;padding:9px;border-radius:8px;background:#f7f9fa}.reportInsight.good{border-left:4px solid #16803c}.reportInsight.bad{border-left:4px solid #c73232}
+@media print{
+  @page{size:A4 portrait;margin:10mm}
+  body{background:#fff!important;color:#172033!important}
+  .wrap > *:not(.reportOverlay){display:none!important}
+  .reportOverlay{
+    display:block!important;
+    position:static!important;
+    inset:auto!important;
+    background:#fff!important;
+    padding:0!important;
+    width:100%!important;
+  }
+  .reportBox{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    max-height:none!important;
+    overflow:visible!important;
+    border-radius:0!important;
+    padding:0!important;
+    background:#fff!important;
+    color:#172033!important;
+  }
+  .reportTop{display:none!important}
+  .reportPlayers{grid-template-columns:1fr 1fr!important}
+  .reportPlayer,.reportTable,.reportHeader,.reportInsight{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+}
+
+</style>
+</head>
+<body><main class="wrap">
+<section class="box"><h1>FCS · Partita Guidata</h1><div class="sub">Facundo Cepeda Sabena · Entrenamiento y análisis</div>
+<div class="names">
+<label>Jugador 1<input id="nombre-J1" value="Jugador 1"></label>
+<label>Jugador 2<input id="nombre-J2" value="Jugador 2"></label>
+<label>Jugador 3<input id="nombre-J3" value="Jugador 3"></label>
+<label>Jugador 4<input id="nombre-J4" value="Jugador 4"></label>
+</div></section>
+<section class="stats" id="totales"></section>
+<div class="table"><table><thead><tr><th>Golpe</th><th>J1</th><th>J2</th><th>J3</th><th>J4</th></tr></thead><tbody id="tabla"></tbody></table></div>
+<div class="actions"><button id="deshacer">↶ Deshacer</button><button id="reiniciar" class="primary">Reiniciar partido</button></div><div class="finishbar"><button id="finalizar" class="finish">✓ Finalizar partido</button><button id="cerrarSinPdf">Cerrar sin informe</button></div>
+<div id="mensaje" class="msg"></div><section id="resumen" class="summary"></section><section id="insights" class="insights"></section>
+
+<div id="reportOverlay" class="reportOverlay">
+  <div class="reportBox">
+    <div class="reportTop">
+      <h2>Informe FCS · Partita Guidata</h2><div class="spacer"></div>
+      <button class="reportBtn" id="copiarResumen">Copiar resumen</button>
+      <button class="reportBtn green" id="guardarPDF">Exportar PDF</button>
+      <button class="reportBtn" id="cerrarInforme">Cerrar</button>
+    </div>
+    <div id="reportContent"></div>
+  </div>
+</div>
+<div class="footer">FCS Padel Academy · Facundo Cepeda Sabena</div>
+</main>
+<script>
+const jugadores=['J1','J2','J3','J4'],golpes=['Devolución','Drive','Revés','Globo','Salida de pared','Volea drive','Volea revés','Bandeja','Víbora','Remate','Punto'],estado={},historial=[];
+jugadores.forEach(j=>{estado[j]={};golpes.forEach(g=>estado[j][g]={acierto:0,error:0})});
+const tabla=document.getElementById('tabla'),mensaje=document.getElementById('mensaje');
+golpes.forEach(g=>{const tr=document.createElement('tr'),n=document.createElement('td');n.textContent=g;tr.appendChild(n);
+jugadores.forEach(j=>{const td=document.createElement('td'),d=document.createElement('div');d.className='btns';
+[['acierto',g==='Punto'?'+ Ganado':'✓','ok'],['error',g==='Punto'?'− Perdido':'✕','bad']].forEach(([t,txt,cl])=>{const b=document.createElement('button');b.className=cl;b.textContent=txt;b.onclick=()=>registrar(j,g,t);d.appendChild(b)});
+td.appendChild(d);tr.appendChild(td)});tabla.appendChild(tr)});
+function nombre(j){return document.getElementById('nombre-'+j).value.trim()||j}
+function registrar(j,g,t){estado[j][g][t]++;historial.push({j,g,t});mensaje.textContent=`${nombre(j)}: ${g} — ${t==='acierto'?'acierto':'error'}`;actualizar()}
+function actualizar(){
+const tot=document.getElementById('totales'),res=document.getElementById('resumen'),ins=document.getElementById('insights');
+tot.innerHTML='';res.innerHTML='';ins.innerHTML='';
+jugadores.forEach(j=>{
+  let a=0,e=0;
+  golpes.forEach(g=>{a+=estado[j][g].acierto;e+=estado[j][g].error});
+  const s=document.createElement('div');
+  s.className='stat';
+  s.innerHTML=`<span>${nombre(j)}</span><b>${a} / ${e}</b><small>Aciertos / errores</small>`;
+  tot.appendChild(s);
+
+  const r=document.createElement('div');
+  r.className='sum';
+  r.innerHTML=`<strong>${nombre(j)}</strong><div>Aciertos: ${a} · Errores: ${e}</div><div>Puntos ganados: ${estado[j].Punto.acierto} · Puntos perdidos: ${estado[j].Punto.error}</div>`;
+  res.appendChild(r);
+
+  const golpesTecnicos=golpes.filter(g=>g!=='Punto');
+  const errores=golpesTecnicos.map(g=>({golpe:g,valor:estado[j][g].error})).filter(x=>x.valor>0).sort((x,y)=>y.valor-x.valor);
+  const aciertos=golpesTecnicos.map(g=>({golpe:g,valor:estado[j][g].acierto})).filter(x=>x.valor>0).sort((x,y)=>y.valor-x.valor);
+
+  const erroresHtml=errores.length
+    ? errores.slice(0,3).map(x=>`<li>${x.golpe}: ${x.valor}</li>`).join('')
+    : '<li>Sin errores registrados</li>';
+  const aciertosHtml=aciertos.length
+    ? aciertos.slice(0,3).map(x=>`<li>${x.golpe}: ${x.valor}</li>`).join('')
+    : '<li>Sin aciertos registrados</li>';
+
+  const i=document.createElement('div');
+  i.className='insight';
+  i.innerHTML=`<h3>${nombre(j)}</h3>
+    <strong>Más errores</strong><ul>${erroresHtml}</ul>
+    <strong>Más aciertos</strong><ul>${aciertosHtml}</ul>
+    <div style="margin-top:8px"><strong>Puntos ganados:</strong> ${estado[j].Punto.acierto}</div>
+    <div><strong>Puntos perdidos:</strong> ${estado[j].Punto.error}</div>`;
+  ins.appendChild(i);
+});
+try{
+  localStorage.setItem('padelEstado',JSON.stringify(estado));
+  const n={};jugadores.forEach(j=>n[j]=nombre(j));
+  localStorage.setItem('padelNombres',JSON.stringify(n));
+}catch(e){}
+}
+
+function datosJugador(j){
+  let aciertos=0,errores=0;
+  golpes.forEach(g=>{aciertos+=estado[j][g].acierto;errores+=estado[j][g].error});
+  const tecnicos=golpes.filter(g=>g!=='Punto');
+  const mejores=tecnicos.map(g=>({g,v:estado[j][g].acierto})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  const erroresTop=tecnicos.map(g=>({g,v:estado[j][g].error})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  return {j,nombre:nombre(j),aciertos,errores,pGan:estado[j].Punto.acierto,pPer:estado[j].Punto.error,mejores,erroresTop};
+}
+function construirInforme(){
+  const fecha=new Date().toLocaleDateString('es-ES');
+  const datos=jugadores.map(datosJugador);
+  const filas=golpes.map(g=>`<tr><td style="text-align:left"><b>${g}</b></td>${jugadores.map(j=>`<td>${estado[j][g].acierto} / ${estado[j][g].error}</td>`).join('')}</tr>`).join('');
+  const cards=datos.map(d=>`<div class="reportPlayer"><h3>${d.nombre}</h3>
+    <div><b>Aciertos / errores:</b> ${d.aciertos} / ${d.errores}</div>
+    <div><b>Puntos ganados / perdidos:</b> ${d.pGan} / ${d.pPer}</div>
+    <div class="reportInsight good"><b>Golpes más efectivos:</b><br>${d.mejores.length?d.mejores.slice(0,3).map(x=>`${x.g}: ${x.v}`).join(' · '):'Sin datos suficientes'}</div>
+    <div class="reportInsight bad"><b>Aspectos a revisar:</b><br>${d.erroresTop.length?d.erroresTop.slice(0,3).map(x=>`${x.g}: ${x.v}`).join(' · '):'Sin errores registrados'}</div>
+  </div>`).join('');
+  document.getElementById('reportContent').innerHTML=`<div class="reportHeader"><h2 style="margin:0">FCS PADEL ACADEMY · INFORME DE PARTIDO</h2><small>${fecha} · Partita Guidata</small></div>
+    <div class="reportPlayers">${cards}</div>
+    <table class="reportTable"><thead><tr><th>Golpe</th>${jugadores.map(j=>`<th>${nombre(j)}</th>`).join('')}</tr></thead><tbody>${filas}</tbody></table>
+    <div style="margin-top:12px;font-size:12px;color:#687386">Formato: aciertos / errores. Informe generado automáticamente por FCS Padel Academy.</div>`;
+}
+function abrirInforme(){
+  construirInforme();
+  document.getElementById('reportOverlay').classList.add('show');
+}
+function resumenTexto(){
+  const datos=jugadores.map(datosJugador);
+  return ['FCS PADEL ACADEMY · PARTITA GUIDATA',new Date().toLocaleDateString('es-ES'),'',
+    ...datos.flatMap(d=>[`${d.nombre}: ${d.aciertos} aciertos / ${d.errores} errores · Puntos ${d.pGan}/${d.pPer}`,
+      `Mejor: ${d.mejores[0]?.g||'—'} · A revisar: ${d.erroresTop[0]?.g||'—'}`,''])].join('\n');
+}
+document.getElementById('finalizar').onclick=abrirInforme;
+document.getElementById('cerrarSinPdf').onclick=()=>{mensaje.textContent='Partido cerrado sin generar informe.'};
+document.getElementById('cerrarInforme').onclick=()=>document.getElementById('reportOverlay').classList.remove('show');
+document.getElementById('guardarPDF').onclick=()=>window.print();
+document.getElementById('copiarResumen').onclick=async()=>{
+  try{await navigator.clipboard.writeText(resumenTexto());alert('Resumen copiado. Ya podés pegarlo en WhatsApp.')}
+  catch(e){alert('No se pudo copiar automáticamente en este navegador.')}
+};
+
+function cargar(){try{const e=JSON.parse(localStorage.getItem('padelEstado'));if(e)jugadores.forEach(j=>golpes.forEach(g=>{if(e[j]?.[g])estado[j][g]=e[j][g]}));const n=JSON.parse(localStorage.getItem('padelNombres'));if(n)jugadores.forEach(j=>{if(n[j])document.getElementById('nombre-'+j).value=n[j]})}catch(e){}}
+document.querySelectorAll('input').forEach(i=>i.addEventListener('input',actualizar));
+document.getElementById('deshacer').onclick=()=>{const u=historial.pop();if(!u){mensaje.textContent='No hay registros para deshacer.';return}estado[u.j][u.g][u.t]=Math.max(0,estado[u.j][u.g][u.t]-1);actualizar()};
+document.getElementById('reiniciar').onclick=()=>{if(confirm('¿Reiniciar todos los registros?')){jugadores.forEach(j=>golpes.forEach(g=>estado[j][g]={acierto:0,error:0}));historial.length=0;actualizar()}};
+cargar();actualizar();
+</script></body></html>

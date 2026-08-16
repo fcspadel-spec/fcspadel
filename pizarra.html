@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Pizarra FCS Web V17</title>
+<style>
+:root{
+  --bg:#07131c; --panel:#0f202a; --court:#263943;
+  --lime:#baff38; --white:#f6f9fb; --muted:#82919c;
+  --blue:#2d7fd7; --yellow:#ffc31a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--white);font-family:Arial,Helvetica,sans-serif}
+body{overflow:hidden}
+button{font:inherit}
+#app{height:100%;display:grid;grid-template-rows:60px 1fr}
+header{display:flex;align-items:center;padding:0 16px;border-bottom:1px solid #29414e;background:#081620;gap:10px}
+.brand{font-size:26px;font-weight:900}.brand small{font-size:10px;color:var(--lime);margin-left:8px;letter-spacing:1.1px}
+.actions{margin-left:auto;display:flex;gap:7px}
+.btn{background:#142a35;color:#fff;border:1px solid #36505f;border-radius:8px;padding:8px 11px;cursor:pointer}
+.btn.primary{background:var(--lime);color:#07131c;border-color:var(--lime);font-weight:800}
+main{min-height:0;display:grid;grid-template-columns:175px minmax(560px,1fr) 210px;gap:10px;padding:10px}
+.panel{min-height:0;background:var(--panel);border:1px solid #29414e;border-radius:12px;padding:10px;overflow:auto}
+h3{font-size:11px;color:var(--lime);margin:6px 0 9px;letter-spacing:.8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+.tool{background:#172c37;border:1px solid #36505f;color:white;border-radius:8px;padding:8px 4px;font-size:11px;cursor:pointer}
+.tool:hover{border-color:var(--lime)}
+.dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;margin:0 auto 4px;border:2px solid white;font-weight:bold}
+.blue{background:var(--blue)} .yellow{background:var(--yellow);color:#111} .gray{background:#7a8993}
+#stageWrap{min-width:0;min-height:0;display:flex;align-items:center;justify-content:center}
+#board{width:100%;height:100%;max-height:calc(100vh - 80px);background:#0b1a23;border:1px solid #29414e;border-radius:12px;touch-action:none;user-select:none}
+.note{font-size:11px;color:var(--muted);line-height:1.45}
+.status{background:#0a1921;padding:8px;border-radius:8px;font-size:11px;margin-bottom:8px}
+.prop{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;margin-bottom:10px}
+.prop div{background:#0b1921;padding:7px;border-radius:6px}
+#savedList{display:flex;flex-direction:column;gap:5px}.savedRow{display:flex;gap:4px}.savedRow button:first-child{flex:1}
+@media(max-width:900px){
+ main{grid-template-columns:140px 1fr 155px}
+ .grid{grid-template-columns:1fr}
+ .panel{padding:7px}
+ .actions .btn{padding:6px 7px;font-size:11px}
+ .brand{font-size:20px}.brand small{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="brand">FCS <small>PADEL ACADEMY · PIZARRA V17</small></div>
+  <div class="actions">
+    <button class="btn" id="undoBtn">↶</button>
+    <button class="btn" id="redoBtn">↷</button>
+    <button class="btn" id="newBtn">Nuevo</button>
+    <button class="btn" id="saveBtn">Guardar</button>
+    <button class="btn primary" id="exportBtn">Exportar PNG</button>
+  </div>
+</header>
+
+<main>
+<aside class="panel">
+  <h3>JUGADORES</h3>
+  <div class="grid">
+    <button class="tool playerBtn" data-team="blue"><div class="dot blue">A</div>Azul</button>
+    <button class="tool playerBtn" data-team="yellow"><div class="dot yellow">C</div>Amarillo</button>
+    <button class="tool" id="coachBtn"><div class="dot gray">P</div>Profesor</button>
+    <button class="tool" id="ballBtn">🟡<br>Pelota</button>
+  </div>
+
+  <h3>MATERIAL</h3>
+  <div class="grid">
+    <button class="tool" id="coneBtn">▲<br>Cono</button>
+    <button class="tool" id="zoneBtn">▰<br>Zona</button>
+    <button class="tool" id="circleZoneBtn">◯<br>Círculo</button>
+    <button class="tool" id="ladderBtn">▥<br>Escalera</button>
+  </div>
+
+  <h3>TRAYECTORIAS</h3>
+  <div class="grid">
+    <button class="tool" id="arrowBtn">➜<br>Flecha</button>
+    <button class="tool" id="dashBtn">⇢<br>Desplaz.</button>
+    <button class="tool" id="curveBtn">⌒➜<br>Globo</button>
+    <button class="tool" id="textBtn">T<br>Texto</button>
+  </div>
+
+  <p class="note"><b>V17:</b> se corrigió el problema real: los controles de los accesorios ya no se destruyen mientras los arrastrás. El giro ahora es continuo y rápido, igual que la flecha V6.</p>
+</aside>
+
+<section id="stageWrap">
+<svg id="board" viewBox="0 0 1200 675" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <marker id="arrowHeadLime" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#baff38"/>
+    </marker>
+    <marker id="arrowHeadWhite" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#f6f9fb"/>
+    </marker>
+  </defs>
+
+  <g id="court" pointer-events="none">
+    <rect x="150" y="35" width="900" height="605" rx="3" fill="#263943" stroke="#f6f9fb" stroke-width="4"/>
+    <rect x="160" y="45" width="880" height="585" fill="none" stroke="#6f808a" stroke-width="1.5"/>
+    <line x1="150" y1="337.5" x2="1050" y2="337.5" stroke="#baff38" stroke-width="5"/>
+    <line x1="150" y1="145" x2="1050" y2="145" stroke="#f6f9fb" stroke-width="2"/>
+    <line x1="150" y1="530" x2="1050" y2="530" stroke="#f6f9fb" stroke-width="2"/>
+    <line x1="600" y1="145" x2="600" y2="530" stroke="#f6f9fb" stroke-width="2"/>
+    <text x="600" y="25" text-anchor="middle" fill="#6d7e88" font-size="14">CANCHA FCS · BLOQUEADA</text>
+  </g>
+
+  <g id="objects"></g>
+  <g id="selection"></g>
+</svg>
+</section>
+
+<aside class="panel">
+  <h3>SELECCIONADO</h3>
+  <div class="status" id="status">Ningún elemento</div>
+  <div class="prop"><div>Rotación<br><b id="rotVal">—</b></div><div>Escala<br><b id="scaleVal">—</b></div></div>
+  <div class="grid">
+    <button class="tool" id="duplicateBtn">Duplicar</button>
+    <button class="tool" id="deleteBtn">Eliminar</button>
+    <button class="tool" id="bringBtn">Al frente</button>
+    <button class="tool" id="resetBtn">Reset tamaño</button>
+  </div>
+
+  <h3>EJERCICIOS GUARDADOS</h3>
+  <div id="savedList"></div>
+  <p class="note">La cancha queda fija. Seleccioná un elemento y usá los controles verdes: esquinas = tamaño, círculo superior = rotación.</p>
+</aside>
+</main>
+</div>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+const board=document.getElementById("board"), objects=document.getElementById("objects"), selection=document.getElementById("selection");
+const statusEl=document.getElementById("status"),rotVal=document.getElementById("rotVal"),scaleVal=document.getElementById("scaleVal");
+let selected=null,history=[],future=[],counts={blue:0,yellow:0},idc=1;
+const $=id=>document.getElementById(id);
+
+function S(tag,a={}){const e=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);return e}
+function uid(){return "o"+idc++}
+function point(e){const p=board.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(board.getScreenCTM().inverse())}
+function push(){history.push(JSON.stringify(serialize()));if(history.length>60)history.shift();future=[]}
+function transformStr(g){
+ const x=+g.dataset.x||0,y=+g.dataset.y||0,r=+g.dataset.rot||0,s=+g.dataset.scale||1;
+ return `translate(${x},${y}) rotate(${r}) scale(${s})`;
+}
+function apply(g){g.setAttribute("transform",transformStr(g))}
+function clearSel(){selection.innerHTML="";if(selected)selected.classList.remove("selected");selected=null;statusEl.textContent="Ningún elemento";rotVal.textContent="—";scaleVal.textContent="—"}
+function select(g){clearSel();selected=g;g.classList.add("selected");statusEl.textContent=g.dataset.type;rotVal.textContent=(+g.dataset.rot||0).toFixed(0)+"°";scaleVal.textContent=(+g.dataset.scale||1).toFixed(2)+"×";drawHandles()}
+
+function localBBox(g){
+ const clone=g.cloneNode(true); clone.removeAttribute("transform"); clone.style.visibility="hidden"; objects.appendChild(clone);
+ const b=clone.getBBox(); clone.remove(); return b;
+}
+function cornersFor(g){
+ const b=localBBox(g),s=+g.dataset.scale||1,r=(+g.dataset.rot||0)*Math.PI/180,x=+g.dataset.x||0,y=+g.dataset.y||0;
+ const pts=[[b.x,b.y],[b.x+b.width,b.y],[b.x+b.width,b.y+b.height],[b.x,b.y+b.height]];
+ return pts.map(([px,py])=>{px*=s;py*=s;return {x:x+px*Math.cos(r)-py*Math.sin(r),y:y+px*Math.sin(r)+py*Math.cos(r)}})
+}
+function centerFor(g){
+ const b=localBBox(g),s=+g.dataset.scale||1,r=(+g.dataset.rot||0)*Math.PI/180,x=+g.dataset.x||0,y=+g.dataset.y||0;
+ const px=(b.x+b.width/2)*s, py=(b.y+b.height/2)*s;
+ return{x:x+px*Math.cos(r)-py*Math.sin(r),y:y+px*Math.sin(r)+py*Math.cos(r)}
+}
+
+
+function drawHandles(){
+ selection.innerHTML="";if(!selected)return;
+ if(selected.dataset.kind==="arrow"){drawArrowHandles();return}
+
+ const pts=cornersFor(selected);
+ const c=centerFor(selected);
+
+ const poly=S("polygon",{
+   id:"basicPoly",
+   points:pts.map(p=>`${p.x},${p.y}`).join(" "),
+   fill:"none",stroke:"#baff38","stroke-width":2,"stroke-dasharray":"7 5"
+ });
+ selection.append(poly);
+
+ [0,2].forEach(i=>{
+   const p=pts[i];
+   const h=S("circle",{
+     id:"basicScale"+i,cx:p.x,cy:p.y,r:10,
+     fill:"#baff38",stroke:"#07131c","stroke-width":4
+   });
+   selection.append(h);
+   bindScale(h);
+ });
+
+ const topMid={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};
+ let vx=topMid.x-c.x,vy=topMid.y-c.y,L=Math.hypot(vx,vy)||1;
+ const rotp={x:topMid.x+vx/L*45,y:topMid.y+vy/L*45};
+
+ const rotLine=S("line",{
+   id:"basicRotLine",x1:topMid.x,y1:topMid.y,x2:rotp.x,y2:rotp.y,
+   stroke:"#baff38","stroke-width":2
+ });
+ const rh=S("circle",{
+   id:"basicRotate",cx:rotp.x,cy:rotp.y,r:11,
+   fill:"#baff38",stroke:"#07131c","stroke-width":4
+ });
+ selection.append(rotLine,rh);
+ bindRotate(rh);
+
+ const mh=S("circle",{
+   id:"basicMove",cx:c.x,cy:c.y,r:8,
+   fill:"#baff38",stroke:"#07131c","stroke-width":3
+ });
+ selection.append(mh);
+ bindMoveHandle(mh);
+}
+
+function updateBasicHandles(){
+ if(!selected || selected.dataset.kind==="arrow")return;
+
+ const pts=cornersFor(selected);
+ const c=centerFor(selected);
+
+ const poly=$("basicPoly");
+ if(poly) poly.setAttribute("points",pts.map(p=>`${p.x},${p.y}`).join(" "));
+
+ [0,2].forEach(i=>{
+   const h=$("basicScale"+i);
+   if(h){h.setAttribute("cx",pts[i].x);h.setAttribute("cy",pts[i].y);}
+ });
+
+ const topMid={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};
+ let vx=topMid.x-c.x,vy=topMid.y-c.y,L=Math.hypot(vx,vy)||1;
+ const rotp={x:topMid.x+vx/L*45,y:topMid.y+vy/L*45};
+
+ const rl=$("basicRotLine");
+ if(rl){
+   rl.setAttribute("x1",topMid.x);rl.setAttribute("y1",topMid.y);
+   rl.setAttribute("x2",rotp.x);rl.setAttribute("y2",rotp.y);
+ }
+ const rh=$("basicRotate");
+ if(rh){rh.setAttribute("cx",rotp.x);rh.setAttribute("cy",rotp.y);}
+
+ const mh=$("basicMove");
+ if(mh){mh.setAttribute("cx",c.x);mh.setAttribute("cy",c.y);}
+}
+
+function bindScale(h){
+ h.addEventListener("pointerdown",e=>{
+  e.stopPropagation();if(!selected)return;push();h.setPointerCapture(e.pointerId);
+
+  const target=selected;
+  const c=centerFor(target),p0=point(e);
+  const d0=Math.hypot(p0.x-c.x,p0.y-c.y)||1;
+  const s0=+target.dataset.scale||1;
+
+  const mv=ev=>{
+    const p=point(ev),d=Math.hypot(p.x-c.x,p.y-c.y);
+    target.dataset.scale=Math.max(.15,Math.min(6,s0*d/d0));
+    apply(target);
+    scaleVal.textContent=(+target.dataset.scale).toFixed(2)+"×";
+    updateBasicHandles();
+  };
+
+  const up=()=>{
+    h.removeEventListener("pointermove",mv);
+    h.removeEventListener("pointerup",up);
+  };
+
+  h.addEventListener("pointermove",mv);
+  h.addEventListener("pointerup",up);
+ })
+}
+
+function bindRotate(h){
+ h.addEventListener("pointerdown",e=>{
+  e.stopPropagation();if(!selected)return;push();h.setPointerCapture(e.pointerId);
+
+  const target=selected;
+  const c=centerFor(target);
+  const p0=point(e);
+  const pointerA0=Math.atan2(p0.y-c.y,p0.x-c.x);
+  const rotation0=(+target.dataset.rot||0)*Math.PI/180;
+
+  const mv=ev=>{
+    const p=point(ev);
+    const pointerA=Math.atan2(p.y-c.y,p.x-c.x);
+
+    // Exact same continuous angle concept as the working V6 arrow.
+    target.dataset.rot=(rotation0 + (pointerA-pointerA0))*180/Math.PI;
+
+    apply(target);
+    rotVal.textContent=(+target.dataset.rot).toFixed(0)+"°";
+
+    // CRITICAL: update positions, DO NOT redraw/destroy the dragged handle.
+    updateBasicHandles();
+  };
+
+  const up=()=>{
+    h.removeEventListener("pointermove",mv);
+    h.removeEventListener("pointerup",up);
+  };
+
+  h.addEventListener("pointermove",mv);
+  h.addEventListener("pointerup",up);
+ })
+}
+
+
+function bindMoveHandle(h){
+ h.addEventListener("pointerdown",e=>{
+   e.stopPropagation();if(!selected)return;push();h.setPointerCapture(e.pointerId);
+
+   const target=selected;
+   const p0=point(e),x0=+target.dataset.x||0,y0=+target.dataset.y||0;
+
+   const mv=ev=>{
+     const p=point(ev);
+     target.dataset.x=x0+p.x-p0.x;
+     target.dataset.y=y0+p.y-p0.y;
+     apply(target);
+     updateBasicHandles();
+   };
+
+   const up=()=>{
+     h.removeEventListener("pointermove",mv);
+     h.removeEventListener("pointerup",up);
+   };
+
+   h.addEventListener("pointermove",mv);
+   h.addEventListener("pointerup",up)
+ })
+}
+
+function bindMove(g){
+ g.style.cursor="grab";g.addEventListener("pointerdown",e=>{
+  if(e.button!==undefined&&e.button!==0)return;
+  e.stopPropagation();select(g);push();g.setPointerCapture(e.pointerId);
+
+  const p0=point(e),x0=+g.dataset.x||0,y0=+g.dataset.y||0;
+
+  const mv=ev=>{
+    const p=point(ev);
+    g.dataset.x=x0+p.x-p0.x;
+    g.dataset.y=y0+p.y-p0.y;
+    apply(g);
+    if(g.dataset.kind==="arrow")updateArrowHandles();
+    else updateBasicHandles();
+  };
+
+  const up=()=>{
+    g.removeEventListener("pointermove",mv);
+    g.removeEventListener("pointerup",up);
+  };
+
+  g.addEventListener("pointermove",mv);
+  g.addEventListener("pointerup",up)
+ })
+}
+function baseGroup(kind,type,x=600,y=330){
+ const g=S("g",{"data-kind":kind,"data-type":type,"data-id":uid()});g.dataset.x=x;g.dataset.y=y;g.dataset.rot=0;g.dataset.scale=1;objects.append(g);apply(g);bindMove(g);return g
+}
+function addPlayer(team){
+ push();counts[team]++;const labs=team==="blue"?["A","B"]:["C","D"],lab=labs[(counts[team]-1)%2],g=baseGroup("basic","Jugador "+team,520,245),fill=team==="blue"?"#2d7fd7":"#ffc31a",txt=team==="yellow"?"#07131c":"#fff";
+ g.append(S("circle",{cx:0,cy:0,r:22,fill,stroke:"#fff","stroke-width":3}));const t=S("text",{x:0,y:7,"text-anchor":"middle",fill:txt,"font-size":20,"font-weight":800});t.textContent=lab;g.append(t);select(g)
+}
+function addCoach(){push();const g=baseGroup("basic","Profesor",520,245);g.append(S("circle",{cx:0,cy:0,r:22,fill:"#7a8993",stroke:"#fff","stroke-width":3}));const t=S("text",{x:0,y:7,"text-anchor":"middle",fill:"#fff","font-size":20,"font-weight":800});t.textContent="P";g.append(t);select(g)}
+function addBall(){push();const g=baseGroup("basic","Pelota");g.append(S("circle",{cx:0,cy:0,r:10,fill:"#ffc31a",stroke:"#fff","stroke-width":2}));select(g)}
+function addCone(){push();const g=baseGroup("basic","Cono");g.append(S("path",{d:"M0,-18 L-15,15 L15,15 Z",fill:"#baff38",stroke:"#fff","stroke-width":2}));select(g)}
+function addZone(){push();const g=baseGroup("basic","Zona objetivo",540,290);g.append(S("rect",{x:-75,y:-50,width:150,height:100,fill:"#baff38","fill-opacity":.2,stroke:"#baff38","stroke-width":3}));select(g)}
+
+function addCircleZone(){
+ push();
+ const g=baseGroup("basic","Zona circular",560,300);
+ g.append(S("circle",{cx:0,cy:0,r:58,fill:"#ffc31a","fill-opacity":.18,stroke:"#ffc31a","stroke-width":3}));
+ select(g);
+}
+function addLadder(){
+ push();
+ const g=baseGroup("basic","Escalera de coordinación",560,300);
+ g.append(S("rect",{x:-82,y:-28,width:164,height:56,fill:"none",stroke:"#f6f9fb","stroke-width":3}));
+ for(let x=-61;x<=61;x+=30.5){
+   g.append(S("line",{x1:x,y1:-28,x2:x,y2:28,stroke:"#baff38","stroke-width":3}));
+ }
+ select(g);
+}
+function addCurve(){
+ push();
+ const g=baseGroup("basic","Flecha curva / globo",560,300);
+ const p=S("path",{d:"M -95 38 Q 0 -90 95 38",fill:"none",stroke:"#baff38","stroke-width":6,"stroke-linecap":"round"});
+ g.append(p);
+ const head=S("path",{d:"M 95 38 L 75 29 M 95 38 L 82 55",fill:"none",stroke:"#baff38","stroke-width":6,"stroke-linecap":"round"});
+ g.append(head);
+ select(g);
+}
+function addFreeText(){
+ const value=prompt("Texto a colocar:","VOLEA");
+ if(!value)return;
+ push();
+ const g=baseGroup("basic","Texto libre",560,300);
+ const t=S("text",{x:0,y:0,"text-anchor":"middle",fill:"#f6f9fb","font-size":28,"font-weight":800});
+ t.textContent=value;
+ g.append(t);
+ select(g);
+}
+
+
+function addArrow(dashed=false,x1=430,y1=250,x2=750,y2=390,noHist=false){
+ if(!noHist)push();
+ const g=S("g",{"data-kind":"arrow","data-type":dashed?"Desplazamiento":"Flecha","data-id":uid(),"data-dashed":dashed?"1":"0"});
+ g.dataset.x=0;g.dataset.y=0;g.dataset.rot=0;g.dataset.scale=1;
+ const l=S("line",{x1,y1,x2,y2,stroke:dashed?"#f6f9fb":"#baff38","stroke-width":6,"stroke-linecap":"round","marker-end":dashed?"url(#arrowHeadWhite)":"url(#arrowHeadLime)"});
+ if(dashed)l.setAttribute("stroke-dasharray","16 12");g.append(l);objects.append(g);setArrow(g,x1,y1,x2,y2);bindArrowMove(g);select(g);return g
+}
+function setArrow(g,x1,y1,x2,y2){Object.assign(g.dataset,{x1,y1,x2,y2});const l=g.querySelector("line");l.setAttribute("x1",x1);l.setAttribute("y1",y1);l.setAttribute("x2",x2);l.setAttribute("y2",y2)}
+
+function drawArrowHandles(){
+ const x1=+selected.dataset.x1,y1=+selected.dataset.y1,x2=+selected.dataset.x2,y2=+selected.dataset.y2;
+ const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1;
+ const mx=(x1+x2)/2,my=(y1+y2)/2;
+ const nx=-dy/L, ny=dx/L;
+ const rx=mx+nx*45, ry=my+ny*45;
+
+ const helper=S("line",{id:"arrowHelper",x1,y1,x2,y2,stroke:"#baff38","stroke-width":1.5,"stroke-dasharray":"6 5"});
+ const start=S("circle",{id:"arrowStart",cx:x1,cy:y1,r:11,fill:"#baff38",stroke:"#07131c","stroke-width":4});
+ const end=S("circle",{id:"arrowEnd",cx:x2,cy:y2,r:11,fill:"#baff38",stroke:"#07131c","stroke-width":4});
+ const rotLine=S("line",{id:"arrowRotLine",x1:mx,y1:my,x2:rx,y2:ry,stroke:"#baff38","stroke-width":2});
+ const rot=S("circle",{id:"arrowRotate",cx:rx,cy:ry,r:11,fill:"#baff38",stroke:"#07131c","stroke-width":4});
+ selection.append(helper,rotLine,start,end,rot);
+ bindArrowEnd(start,"start");
+ bindArrowEnd(end,"end");
+ bindArrowRotate(rot);
+}
+function updateArrowHandles(){
+ if(!selected || selected.dataset.kind!=="arrow") return;
+ const x1=+selected.dataset.x1,y1=+selected.dataset.y1,x2=+selected.dataset.x2,y2=+selected.dataset.y2;
+ const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1;
+ const mx=(x1+x2)/2,my=(y1+y2)/2;
+ const nx=-dy/L, ny=dx/L;
+ const rx=mx+nx*45, ry=my+ny*45;
+ const helper=$("arrowHelper"),start=$("arrowStart"),end=$("arrowEnd"),rotLine=$("arrowRotLine"),rot=$("arrowRotate");
+ if(helper){helper.setAttribute("x1",x1);helper.setAttribute("y1",y1);helper.setAttribute("x2",x2);helper.setAttribute("y2",y2)}
+ if(start){start.setAttribute("cx",x1);start.setAttribute("cy",y1)}
+ if(end){end.setAttribute("cx",x2);end.setAttribute("cy",y2)}
+ if(rotLine){rotLine.setAttribute("x1",mx);rotLine.setAttribute("y1",my);rotLine.setAttribute("x2",rx);rotLine.setAttribute("y2",ry)}
+ if(rot){rot.setAttribute("cx",rx);rot.setAttribute("cy",ry)}
+}
+function bindArrowMove(g){
+ g.style.cursor="grab";
+ g.addEventListener("pointerdown",e=>{
+  e.stopPropagation();select(g);push();g.setPointerCapture(e.pointerId);
+  const p0=point(e),x10=+g.dataset.x1,y10=+g.dataset.y1,x20=+g.dataset.x2,y20=+g.dataset.y2;
+  const mv=ev=>{
+    const p=point(ev),dx=p.x-p0.x,dy=p.y-p0.y;
+    setArrow(g,x10+dx,y10+dy,x20+dx,y20+dy);
+    updateArrowHandles();
+  };
+  const up=()=>{g.removeEventListener("pointermove",mv);g.removeEventListener("pointerup",up)};
+  g.addEventListener("pointermove",mv);g.addEventListener("pointerup",up)
+ })
+}
+function bindArrowEnd(c,role){
+ c.addEventListener("pointerdown",e=>{
+  e.stopPropagation();if(!selected)return;push();c.setPointerCapture(e.pointerId);
+  const target=selected;
+  const mv=ev=>{
+    const p=point(ev);
+    let x1=+target.dataset.x1,y1=+target.dataset.y1,x2=+target.dataset.x2,y2=+target.dataset.y2;
+    if(role==="start"){x1=p.x;y1=p.y}else{x2=p.x;y2=p.y}
+    setArrow(target,x1,y1,x2,y2);
+    updateArrowHandles();
+  };
+  const up=()=>{c.removeEventListener("pointermove",mv);c.removeEventListener("pointerup",up)};
+  c.addEventListener("pointermove",mv);c.addEventListener("pointerup",up)
+ })
+}
+function bindArrowRotate(c){
+ c.addEventListener("pointerdown",e=>{
+  e.stopPropagation();if(!selected)return;push();c.setPointerCapture(e.pointerId);
+  const target=selected;
+  const x1=+target.dataset.x1,y1=+target.dataset.y1,x2=+target.dataset.x2,y2=+target.dataset.y2;
+  const mx=(x1+x2)/2,my=(y1+y2)/2,L=Math.hypot(x2-x1,y2-y1);
+  const a0=Math.atan2(y2-y1,x2-x1);
+  const p0=point(e);
+  const pointerA0=Math.atan2(p0.y-my,p0.x-mx);
+  const mv=ev=>{
+    const p=point(ev);
+    const a=a0 + (Math.atan2(p.y-my,p.x-mx)-pointerA0);
+    const hx=Math.cos(a)*L/2, hy=Math.sin(a)*L/2;
+    setArrow(target,mx-hx,my-hy,mx+hx,my+hy);
+    updateArrowHandles();
+  };
+  const up=()=>{c.removeEventListener("pointermove",mv);c.removeEventListener("pointerup",up)};
+  c.addEventListener("pointermove",mv);c.addEventListener("pointerup",up)
+ })
+}
+
+function serialize(){return [...objects.children].map(g=>({kind:g.dataset.kind,type:g.dataset.type,dashed:g.dataset.dashed||"",x:g.dataset.x||0,y:g.dataset.y||0,rot:g.dataset.rot||0,scale:g.dataset.scale||1,x1:g.dataset.x1||"",y1:g.dataset.y1||"",x2:g.dataset.x2||"",y2:g.dataset.y2||"",html:g.innerHTML}))}
+function restore(arr){
+ clearSel();objects.innerHTML="";
+ arr.forEach(o=>{
+  if(o.kind==="arrow"){addArrow(o.dashed==="1",+o.x1,+o.y1,+o.x2,+o.y2,true);return}
+  const g=S("g",{"data-kind":o.kind,"data-type":o.type,"data-id":uid()});g.innerHTML=o.html;g.dataset.x=o.x;g.dataset.y=o.y;g.dataset.rot=o.rot;g.dataset.scale=o.scale;objects.append(g);apply(g);bindMove(g)
+ });clearSel()
+}
+
+document.querySelectorAll(".playerBtn").forEach(b=>b.onclick=()=>addPlayer(b.dataset.team));
+$("coachBtn").onclick=addCoach;$("ballBtn").onclick=addBall;$("coneBtn").onclick=addCone;$("zoneBtn").onclick=addZone;
+$("circleZoneBtn").onclick=addCircleZone;$("ladderBtn").onclick=addLadder;$("curveBtn").onclick=addCurve;$("textBtn").onclick=addFreeText;
+$("arrowBtn").onclick=()=>addArrow(false);$("dashBtn").onclick=()=>addArrow(true);
+$("deleteBtn").onclick=()=>{if(selected){push();selected.remove();clearSel()}};
+$("bringBtn").onclick=()=>{if(selected){objects.appendChild(selected);drawHandles()}};
+$("resetBtn").onclick=()=>{if(selected&&selected.dataset.kind!=="arrow"){push();selected.dataset.scale=1;selected.dataset.rot=0;apply(selected);select(selected)}};
+$("duplicateBtn").onclick=()=>{
+ if(!selected)return;push();
+ if(selected.dataset.kind==="arrow")addArrow(selected.dataset.dashed==="1",+selected.dataset.x1+25,+selected.dataset.y1+25,+selected.dataset.x2+25,+selected.dataset.y2+25,true);
+ else{const g=selected.cloneNode(true);g.classList.remove("selected");g.dataset.id=uid();g.dataset.x=+selected.dataset.x+25;g.dataset.y=+selected.dataset.y+25;objects.append(g);apply(g);bindMove(g);select(g)}
+};
+$("newBtn").onclick=()=>{if(confirm("¿Limpiar la cancha?")){push();objects.innerHTML="";clearSel()}};
+$("undoBtn").onclick=()=>{if(history.length){future.push(JSON.stringify(serialize()));restore(JSON.parse(history.pop()))}};
+$("redoBtn").onclick=()=>{if(future.length){history.push(JSON.stringify(serialize()));restore(JSON.parse(future.pop()))}};
+$("saveBtn").onclick=()=>{const n=prompt("Nombre del ejercicio:","Ejercicio FCS");if(n){localStorage.setItem("fcs4_"+n,JSON.stringify(serialize()));renderSaved()}};
+function renderSaved(){const d=$("savedList");d.innerHTML="";Object.keys(localStorage).filter(k=>k.startsWith("fcs4_")).sort().forEach(k=>{const row=document.createElement("div");row.className="savedRow";const b=document.createElement("button");b.className="tool";b.textContent=k.slice(5);b.onclick=()=>restore(JSON.parse(localStorage.getItem(k)));const x=document.createElement("button");x.className="tool";x.textContent="×";x.onclick=()=>{localStorage.removeItem(k);renderSaved()};row.append(b,x);d.append(row)})}renderSaved();
+
+$("exportBtn").onclick=()=>{
+ clearSel();
+ const clone=board.cloneNode(true);clone.querySelector("#selection").innerHTML="";
+ const xml=new XMLSerializer().serializeToString(clone),blob=new Blob([xml],{type:"image/svg+xml;charset=utf-8"}),url=URL.createObjectURL(blob),img=new Image();
+ img.onload=()=>{
+  const canvas=document.createElement("canvas");canvas.width=2400;canvas.height=1350;
+  const ctx=canvas.getContext("2d");ctx.fillStyle="#07131c";ctx.fillRect(0,0,2400,1350);ctx.drawImage(img,0,0,2400,1350);URL.revokeObjectURL(url);
+  canvas.toBlob(png=>{const a=document.createElement("a");a.href=URL.createObjectURL(png);a.download="Ejercicio_FCS.png";document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)},"image/png")
+ };img.src=url
+};
+
+board.addEventListener("pointerdown",e=>{if(e.target===board||e.target.closest("#court"))clearSel()});
+</script>
+</body>
+</html>
