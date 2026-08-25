@@ -385,6 +385,28 @@ footer{text-align:center;color:#69767e;font-size:11px;margin-top:22px}
 /* V12.5 — PDF usa la misma cancha FCS PRO de la Biblioteca */
 .proCourt svg{display:block;width:100%;height:100%;object-fit:contain}
 @media print{.proCourt svg,.proCourt svg *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}
+
+/* V12.6 — mejoras seguras Planning: nombres, contador e impresión */
+.studentTotalBadge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#111a1f;border:1px solid #334149;border-radius:9px;
+  padding:10px 13px;color:#dce5e8;font-size:12px;font-weight:800;
+  white-space:nowrap
+}
+.studentTotalBadge strong{color:var(--green);font-size:16px}
+.weeklyPlanner{min-width:1600px;grid-template-columns:78px repeat(10,minmax(145px,1fr))}
+.wpStudentRow{grid-template-columns:minmax(0,1fr) 18px!important}
+.wpStudentRow .wpName{
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  font-size:10px!important
+}
+.wpNames{overflow:visible!important}
+.wpClass{overflow:visible!important}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -537,7 +559,7 @@ footer{text-align:center;color:#69767e;font-size:11px;margin-top:22px}
 <section class="view" id="alumnos">
 <div id="studentList">
  <div class="header"><div><h1 data-i18n="students_title">Alumnos</h1><p>Base de alumnos FCS · perfiles, evaluaciones e historial.</p></div></div>
- <div class="studentsbar"><input id="studentSearch" class="search" placeholder="Buscar alumno..."><button class="action" onclick="openNewStudent()">+ Nuevo alumno</button></div>
+ <div class="studentsbar"><input id="studentSearch" class="search" placeholder="Buscar alumno..."><div class="studentTotalBadge">Alumnos cargados: <strong id="studentsTotalCount">0</strong></div><button class="action" onclick="openNewStudent()">+ Nuevo alumno</button></div>
  <div id="studentGrid" class="studentgrid"></div>
 </div>
 <div id="studentProfile" style="display:none">
@@ -606,9 +628,11 @@ footer{text-align:center;color:#69767e;font-size:11px;margin-top:22px}
  <div class="header">
   <div><h1>Planning FCS</h1><p>Organización semanal de clases y canchas.</p></div>
   <div style="margin-left:auto;display:flex;gap:7px;flex-wrap:wrap">
+   <div class="studentTotalBadge">Alumnos: <strong id="planningStudentCount">0</strong></div>
    <button class="action secondary" onclick="weekMove(-1)">← Semana</button>
    <button class="action secondary" onclick="weekToday()">Hoy</button><button class="action secondary" onclick="openScheduleSettings()">⚙ Horarios</button>
    <button class="action secondary" onclick="weekMove(1)">Semana →</button>
+   <button class="action secondary" onclick="printPlanning()">🖨 Imprimir</button>
    <button class="action" onclick="openClassModal()">+ Nueva clase</button>
   </div>
  </div>
@@ -842,6 +866,10 @@ let students=JSON.parse(localStorage.getItem("fcs_students")||"[]"), currentStud
 function persist(){localStorage.setItem("fcs_students",JSON.stringify(students));fcsCloudSchedulePush()}
 function initials(n){return (n||"?").split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase()}
 function renderStudents(){
+ const totalEl=document.getElementById("studentsTotalCount");
+ const planningTotalEl=document.getElementById("planningStudentCount");
+ if(totalEl)totalEl.textContent=students.length;
+ if(planningTotalEl)planningTotalEl.textContent=students.length;
  const q=(document.getElementById("studentSearch")?.value||"").toLowerCase(),g=document.getElementById("studentGrid"); if(!g)return;
  const list=students.filter(s=>s.name.toLowerCase().includes(q));
  g.innerHTML=list.length?list.map(s=>`<div class="studentcard" onclick="openStudent('${s.id}')"><div class="studenttop"><div class="studentavatar">${initials(s.name)}</div><div><b>${s.name}</b><small>${s.phone||"Sin contacto"}</small></div></div><div class="chips"><span class="chip">Nivel ${s.level}</span><span class="chip">${s.side}</span><span class="chip ${s.status==="Activo"?"on":""}">${s.status}</span></div><div style="margin-top:10px"><button class="waStudentBtn" onclick="event.stopPropagation();openWhatsAppStudent('${s.id}')">WhatsApp</button></div></div>`).join(""):`<div class="placeholder" style="grid-column:1/-1"><strong>Base FCS</strong>Agregá tu primer alumno con “+ Nuevo alumno”.</div>`;
@@ -1568,6 +1596,8 @@ function weekMove(n){fcsWeekStart.setDate(fcsWeekStart.getDate()+n*7);renderWeek
 function weekToday(){fcsWeekStart=(d=>{d=new Date(d);d.setDate(d.getDate()-((d.getDay()+6)%7));d.setHours(0,0,0,0);return d})(new Date());renderWeeklyPlanner()}
 function renderWeeklyPlanner(){
  sortFcsTimes();
+ const planningTotalEl=document.getElementById("planningStudentCount");
+ if(planningTotalEl)planningTotalEl.textContent=students.length;
  const box=document.getElementById("weeklyPlanner");if(!box)return;
  const days=Array.from({length:5},(_,i)=>{const d=new Date(fcsWeekStart);d.setDate(d.getDate()+i);return d});
  const end=new Date(days[4]);
@@ -2258,6 +2288,100 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("fcsCloudBadge")?.addEventListener("click",openCloud);
   document.getElementById("fcsCloudHeaderBtn")?.addEventListener("click",openCloud);
 });
+
+
+function printPlanning(){
+ const planner=document.getElementById("weeklyPlanner");
+ const range=document.getElementById("weekRange");
+ if(!planner)return;
+
+ const target=document.createElement("div");
+ target.id="fcsPlanningPrintTarget";
+ target.innerHTML=`
+   <div class="fcsPlanningPrintHead">
+     <div><b>FCS PADEL ACADEMY</b><span>Planning semanal</span></div>
+     <div>${range?range.textContent:""}</div>
+   </div>
+   <div class="fcsPlanningPrintPlanner">${planner.outerHTML}</div>
+ `;
+
+ const style=document.createElement("style");
+ style.id="fcsPlanningPrintStyle";
+ style.textContent=`
+   @page{size:A4 landscape;margin:7mm}
+   @media print{
+     html,body{width:auto!important;height:auto!important;background:#fff!important}
+     body>*{display:none!important}
+     body>#fcsPlanningPrintTarget{display:block!important;visibility:visible!important}
+     body>#fcsPlanningPrintTarget *{visibility:visible!important}
+     #fcsPlanningPrintTarget{
+       display:block!important;background:#fff!important;color:#111!important;
+       font-family:Arial,sans-serif!important;width:100%!important
+     }
+     #fcsPlanningPrintTarget .fcsPlanningPrintHead{
+       display:flex!important;justify-content:space-between!important;align-items:end!important;
+       border-bottom:2px solid #49df69!important;padding:0 0 3mm!important;margin:0 0 4mm!important
+     }
+     #fcsPlanningPrintTarget .fcsPlanningPrintHead b{
+       display:block!important;font-size:15pt!important;color:#111!important
+     }
+     #fcsPlanningPrintTarget .fcsPlanningPrintHead span{
+       display:block!important;font-size:9pt!important;color:#555!important;margin-top:1mm!important
+     }
+     #fcsPlanningPrintTarget .weekWrap{overflow:visible!important;border:0!important}
+     #fcsPlanningPrintTarget .weeklyPlanner{
+       min-width:0!important;width:100%!important;
+       display:grid!important;
+       grid-template-columns:14mm repeat(10,minmax(0,1fr))!important;
+       background:#fff!important
+     }
+     #fcsPlanningPrintTarget .wpCell{
+       min-height:18mm!important;padding:1.2mm!important;
+       border-right:.25mm solid #bbb!important;border-bottom:.25mm solid #bbb!important;
+       background:#fff!important;color:#111!important
+     }
+     #fcsPlanningPrintTarget .wpCorner,
+     #fcsPlanningPrintTarget .wpDay,
+     #fcsPlanningPrintTarget .wpCourt,
+     #fcsPlanningPrintTarget .wpTime{
+       min-height:8mm!important;background:#eef1f2!important;color:#111!important
+     }
+     #fcsPlanningPrintTarget .wpDay b{font-size:6.6pt!important}
+     #fcsPlanningPrintTarget .wpDay small{font-size:5.7pt!important;color:#444!important}
+     #fcsPlanningPrintTarget .wpCourt{font-size:5.6pt!important}
+     #fcsPlanningPrintTarget .wpTime{font-size:6.3pt!important}
+     #fcsPlanningPrintTarget .wpClass{
+       background:#f3f8f4!important;border-left:1mm solid #49df69!important;
+       padding:1mm!important;margin-bottom:.8mm!important;border-radius:1mm!important
+     }
+     #fcsPlanningPrintTarget .wpClass.done{border-left-color:#6d96a8!important;background:#f0f3f4!important}
+     #fcsPlanningPrintTarget .wpStudentRow{
+       display:block!important;min-height:0!important;padding:.5mm!important;
+       border:0!important;background:transparent!important
+     }
+     #fcsPlanningPrintTarget .wpName{
+       white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;
+       word-break:normal!important;font-size:5.8pt!important;line-height:1.1!important;
+       color:#111!important;font-weight:700!important
+     }
+     #fcsPlanningPrintTarget .wpExtra{font-size:5pt!important;color:#555!important}
+     #fcsPlanningPrintTarget .wpRemoveStudent,
+     #fcsPlanningPrintTarget .wpAdd{display:none!important}
+   }
+ `;
+ document.head.appendChild(style);
+ document.body.appendChild(target);
+
+ const cleanup=()=>{
+   document.getElementById("fcsPlanningPrintTarget")?.remove();
+   document.getElementById("fcsPlanningPrintStyle")?.remove();
+   window.removeEventListener("afterprint",cleanup);
+ };
+ window.addEventListener("afterprint",cleanup);
+ window.print();
+ setTimeout(cleanup,1500);
+}
+
 </script>
 
 </body></html>
