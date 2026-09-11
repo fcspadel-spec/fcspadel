@@ -124,7 +124,7 @@ footer{text-align:center;color:#69767e;font-size:11px;margin-top:22px}
 @media print{@page{size:A4 portrait;margin:0}body>*{display:none!important}.classPdfOverlay{display:block!important;position:static!important;background:#fff!important;padding:0!important}.classPdfToolbar{display:none!important}.classPdfShell{width:auto!important}.fcsProPage{display:block!important;margin:0!important;page-break-after:always}.fcsProPage:last-child{page-break-after:auto}}
 
 .weekTitle{display:flex;justify-content:space-between;align-items:end;margin:4px 0 13px}.weekTitle b{display:block;font-size:18px}.weekTitle small{color:var(--muted)}.weekLegend{display:flex;gap:12px;font-size:10px;color:var(--muted)}.weekLegend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}.lgPlan{background:var(--green)}.lgDone{background:#6d96a8}
-.weekWrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#0b1216}.weeklyPlanner{min-width:1180px;display:grid;grid-template-columns:72px repeat(10,minmax(105px,1fr))}
+.weekWrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#0b1216}.weeklyPlanner{min-width:1180px;display:grid;grid-template-columns:72px repeat(5,minmax(135px,1fr))}
 .wpCell{border-right:1px solid #263238;border-bottom:1px solid #263238;min-height:92px;padding:4px;box-sizing:border-box}.wpCorner,.wpDay{background:#111a1f;min-height:56px}.wpDay{text-align:center;padding:8px 3px}.wpDay b{font-size:11px}.wpDay small{display:block;color:var(--muted);font-size:9px;margin-top:2px}.wpCourt{background:#142018;min-height:28px;text-align:center;color:var(--green);font-size:8.5px;font-weight:800;padding:7px 1px}.wpCourt.alt{background:#172026}.wpTime{background:#10191e;color:#d8e1e4;font-weight:800;font-size:10px;display:flex;align-items:center;justify-content:center;text-align:center}.wpSlot{cursor:pointer;background:#0d1519;transition:.12s}.wpSlot:hover{background:#132027}.wpClass{background:#17251d;border-left:3px solid var(--green);border-radius:6px;padding:6px;font-size:9px;margin-bottom:4px}.wpClass.done{border-left-color:#6d96a8;background:#162027}.wpClass b{display:block;font-size:9.5px}.wpClass small{display:block;color:#aebcc2;margin-top:2px}.wpAdd{opacity:0;color:var(--green);font-size:9px;text-align:center;margin-top:7px}.wpSlot:hover .wpAdd{opacity:1}
 @media(max-width:800px){.weekTitle{align-items:flex-start;gap:8px;flex-direction:column}}
 
@@ -394,7 +394,7 @@ footer{text-align:center;color:#69767e;font-size:11px;margin-top:22px}
   white-space:nowrap
 }
 .studentTotalBadge strong{color:var(--green);font-size:16px}
-.weeklyPlanner{min-width:1600px;grid-template-columns:78px repeat(10,minmax(145px,1fr))}
+.weeklyPlanner{min-width:900px;grid-template-columns:78px repeat(5,minmax(150px,1fr))}
 .wpStudentRow{grid-template-columns:minmax(0,1fr) 18px!important}
 .wpStudentRow .wpName{
   white-space:nowrap!important;
@@ -871,7 +871,7 @@ EXTERNO/COMPARTIDO = Koméro Tozzona Racquet Club · Maestro Facundo Cepeda Sabe
    <button class="action" onclick="openClassModal()">+ Nueva clase</button>
   </div>
  </div>
- <div class="weekTitle"><div><b id="weekRange"></b><small>Vista semanal · Komero / Centrale</small></div><div class="weekLegend"><span><i class="lgPlan"></i>Planificada</span><span><i class="lgDone"></i>Realizada</span></div></div>
+ <div class="weekTitle"><div><b id="weekRange"></b><small>Vista semanal · Koméro</small></div><div class="weekLegend"><span><i class="lgPlan"></i>Planificada</span><span><i class="lgDone"></i>Realizada</span></div></div>
  <div class="weekWrap"><div id="weeklyPlanner" class="weeklyPlanner"></div></div>
 </section>
 
@@ -3397,7 +3397,7 @@ function printPlanning(){
      #fcsPlanningPrintTarget .weeklyPlanner{
        min-width:0!important;width:100%!important;
        display:grid!important;
-       grid-template-columns:14mm repeat(10,minmax(0,1fr))!important;
+       grid-template-columns:14mm repeat(5,minmax(0,1fr))!important;
        background:#fff!important
      }
      #fcsPlanningPrintTarget .wpCell{
@@ -3446,6 +3446,97 @@ function printPlanning(){
  window.print();
  setTimeout(cleanup,1500);
 }
+
+
+/* V17 — PLANNING SOLO KOMÉRO + ELIMINAR CLASE COMPLETA */
+const FCS_PLANNING_COURT_ONLY="Komero";
+
+function fcsPlanningIsKomero(court){
+ const v=String(court||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+ return !v || v.includes("komero");
+}
+
+function deletePlanningClass(classId){
+ const c=classes.find(x=>x.id===classId);
+ if(!c)return;
+ const names=classStudentNames(c);
+ const what=c.customLabel?`“${c.customLabel}”`:(names&&names!=="—"?`la clase de ${names}`:"esta clase");
+ if(!confirm(`¿Eliminar ${what}?\n\nEsta acción borra la clase completa de este horario.`))return;
+ classes=classes.filter(x=>x.id!==classId);
+ persistClasses();
+ try{renderWeeklyPlanner()}catch(e){console.error(e)}
+ try{renderClasses()}catch(e){console.error(e)}
+ try{renderStudentPlan()}catch(e){console.error(e)}
+ try{renderStatistics()}catch(e){console.error(e)}
+}
+
+renderWeeklyPlanner=function(){
+ sortFcsTimes();
+ const planningTotalEl=document.getElementById("planningStudentCount");
+ if(planningTotalEl)planningTotalEl.textContent=students.length;
+ updatePlanningHoursSummary();
+ const box=document.getElementById("weeklyPlanner");if(!box)return;
+ const days=Array.from({length:5},(_,i)=>{const d=new Date(fcsWeekStart);d.setDate(d.getDate()+i);return d});
+ const end=new Date(days[4]);
+ const range=document.getElementById("weekRange");
+ if(range)range.textContent=`${days[0].toLocaleDateString("es-ES",{day:"2-digit",month:"short"})} — ${end.toLocaleDateString("es-ES",{day:"2-digit",month:"short",year:"numeric"})}`;
+
+ let h=`<div class="wpCell wpCorner"></div>`;
+ days.forEach(d=>h+=`<div class="wpCell wpDay"><b>${d.toLocaleDateString("es-ES",{weekday:"long"}).toUpperCase()}</b><small>${d.toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"})}</small></div>`);
+ h+=`<div class="wpCell wpCorner"></div>`;
+ days.forEach(()=>h+=`<div class="wpCell wpCourt">KOMÉRO</div>`);
+
+ FCS_TIMES.forEach(time=>{
+   h+=`<div class="wpCell wpTime">${time}</div>`;
+   days.forEach(d=>{
+     const date=isoLocal(d),court=FCS_PLANNING_COURT_ONLY;
+     const cs=classes.filter(x=>x.date===date&&(x.time||"")===time&&fcsPlanningIsKomero(x.court));
+     h+=`<div class="wpCell wpSlot" onclick="openQuickPlanning('${date}','${time}','${court}')">${cs.map(x=>{
+       const s=classStudent(x);
+       const ids=(x.studentIds||[]);
+       const group=ids.length?ids.map(id=>students.find(st=>st.id===id)).filter(Boolean):[s].filter(Boolean);
+       const studentNames=group.length?group.map(st=>`<div class="wpStudentRow"><div class="wpName">${st.name}</div><button class="wpRemoveStudent" title="Quitar alumno de este horario" onclick="event.stopPropagation();removeStudentFromPlanning('${x.id}','${st.id}')">×</button></div>`).join(""):"";
+       const eventName=x.customLabel?`<div class="wpStudentRow wpEventRow"><div class="wpName">★ ${x.customLabel}</div></div>`:"";
+       const names=eventName+studentNames||`<div class="wpName">${x.objective||"Actividad"}</div>`;
+       return `<div class="wpClass ${x.status==="Realizada"?"done":""}" onclick="event.stopPropagation();openClassModal('${x.id}')"><button class="wpDeleteClass" title="Eliminar clase completa" onclick="event.stopPropagation();deletePlanningClass('${x.id}')">🗑</button><div class="wpNames">${names}</div>${group.length===1?`<div class="wpExtra">Nivel ${group[0].level||"—"}</div>`:""}</div>`;
+     }).join("")}<div class="wpAdd">+ Alumno / evento</div></div>`;
+   });
+ });
+ box.innerHTML=h;
+};
+
+/* La carga rápida queda siempre en KOMÉRO. */
+const fcsOpenQuickPlanningOneCourt=openQuickPlanning;
+openQuickPlanning=function(date,time,court){
+ return fcsOpenQuickPlanningOneCourt(date,time,FCS_PLANNING_COURT_ONLY);
+};
+
+/* Si una clase del planning se guarda/edita desde el modal, conservar KOMÉRO. */
+const fcsOpenClassOneCourt=openClassModal;
+openClassModal=function(editId=""){
+ fcsOpenClassOneCourt(editId);
+ const c=editId?classes.find(x=>x.id===editId):null;
+ if(c&&c.quickPlanning&&!fcsPlanningIsKomero(c.court))return;
+ if(document.getElementById("cCourt"))cCourt.value=FCS_PLANNING_COURT_ONLY;
+};
+
+/* Estilos de una sola cancha y botón eliminar. */
+(function(){
+ const s=document.createElement("style");
+ s.id="fcsOneCourtPlanningStyle";
+ s.textContent=`
+  .weeklyPlanner{min-width:900px!important;grid-template-columns:78px repeat(5,minmax(150px,1fr))!important}
+  .wpClass{position:relative!important;padding-right:27px!important}
+  .wpDeleteClass{position:absolute;right:4px;top:4px;width:21px;height:21px;border:1px solid #573039;background:#26171b;color:#ff8c94;border-radius:5px;cursor:pointer;font-size:11px;line-height:18px;padding:0;opacity:.72;z-index:3}
+  .wpDeleteClass:hover{opacity:1;background:#472027;color:#fff}
+  @media(max-width:800px){.weeklyPlanner{min-width:760px!important;grid-template-columns:70px repeat(5,minmax(130px,1fr))!important}}
+  @media print{#fcsPlanningPrintTarget .weeklyPlanner{grid-template-columns:14mm repeat(5,minmax(0,1fr))!important}.wpDeleteClass{display:none!important}}
+ `;
+ document.head.appendChild(s);
+})();
+
+/* Re-render final para aplicar la vista nueva incluso si la pantalla ya estaba abierta. */
+setTimeout(()=>{try{renderWeeklyPlanner()}catch(e){console.error(e)}},0);
 
 </script>
 
