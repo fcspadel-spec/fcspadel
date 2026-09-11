@@ -1954,8 +1954,8 @@ function renderWeeklyPlanner(){
  if(planningTotalEl)planningTotalEl.textContent=students.length;
  updatePlanningHoursSummary();
  const box=document.getElementById("weeklyPlanner");if(!box)return;
- const days=Array.from({length:5},(_,i)=>{const d=new Date(fcsWeekStart);d.setDate(d.getDate()+i);return d});
- const end=new Date(days[4]);
+ const days=Array.from({length:6},(_,i)=>{const d=new Date(fcsWeekStart);d.setDate(d.getDate()+i);return d});
+ const end=new Date(days[5]);
  document.getElementById("weekRange").textContent=`${days[0].toLocaleDateString("es-ES",{day:"2-digit",month:"short"})} — ${end.toLocaleDateString("es-ES",{day:"2-digit",month:"short",year:"numeric"})}`;
  let h=`<div class="wpCell wpCorner"></div>`;
  days.forEach(d=>h+=`<div class="wpCell wpDay" style="grid-column:span 2"><b>${d.toLocaleDateString("es-ES",{weekday:"long"}).toUpperCase()}</b><small>${d.toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"})}</small></div>`);
@@ -3476,8 +3476,8 @@ renderWeeklyPlanner=function(){
  if(planningTotalEl)planningTotalEl.textContent=students.length;
  updatePlanningHoursSummary();
  const box=document.getElementById("weeklyPlanner");if(!box)return;
- const days=Array.from({length:5},(_,i)=>{const d=new Date(fcsWeekStart);d.setDate(d.getDate()+i);return d});
- const end=new Date(days[4]);
+ const days=Array.from({length:6},(_,i)=>{const d=new Date(fcsWeekStart);d.setDate(d.getDate()+i);return d});
+ const end=new Date(days[5]);
  const range=document.getElementById("weekRange");
  if(range)range.textContent=`${days[0].toLocaleDateString("es-ES",{day:"2-digit",month:"short"})} — ${end.toLocaleDateString("es-ES",{day:"2-digit",month:"short",year:"numeric"})}`;
 
@@ -3525,12 +3525,12 @@ openClassModal=function(editId=""){
  const s=document.createElement("style");
  s.id="fcsOneCourtPlanningStyle";
  s.textContent=`
-  .weeklyPlanner{min-width:900px!important;grid-template-columns:78px repeat(5,minmax(150px,1fr))!important}
+  .weeklyPlanner{min-width:1040px!important;grid-template-columns:78px repeat(6,minmax(150px,1fr))!important}
   .wpClass{position:relative!important;padding-right:27px!important}
   .wpDeleteClass{position:absolute;right:4px;top:4px;width:21px;height:21px;border:1px solid #573039;background:#26171b;color:#ff8c94;border-radius:5px;cursor:pointer;font-size:11px;line-height:18px;padding:0;opacity:.72;z-index:3}
   .wpDeleteClass:hover{opacity:1;background:#472027;color:#fff}
-  @media(max-width:800px){.weeklyPlanner{min-width:760px!important;grid-template-columns:70px repeat(5,minmax(130px,1fr))!important}}
-  @media print{#fcsPlanningPrintTarget .weeklyPlanner{grid-template-columns:14mm repeat(5,minmax(0,1fr))!important}.wpDeleteClass{display:none!important}}
+  @media(max-width:800px){.weeklyPlanner{min-width:900px!important;grid-template-columns:70px repeat(6,minmax(130px,1fr))!important}}
+  @media print{#fcsPlanningPrintTarget .weeklyPlanner{grid-template-columns:14mm repeat(6,minmax(0,1fr))!important}.wpDeleteClass{display:none!important}}
  `;
  document.head.appendChild(s);
 })();
