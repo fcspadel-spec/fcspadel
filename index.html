@@ -2821,9 +2821,9 @@ async function changeFcsPassword(){
  if(next.length<6){msg.textContent="La nueva contraseña debe tener al menos 6 caracteres.";return}
  if(next!==repeat){msg.textContent="Las nuevas contraseñas no coinciden.";return}
  const currentHash=await fcsSha256(current);
- const activeHash=localStorage.getItem("fcs_custom_pass_hash")||FCS_LOGIN_PASS_HASH;
+ const activeHash=localStorage.getItem("fcs_custom_pass_hash_v2")||FCS_LOGIN_PASS_HASH;
  if(currentHash!==activeHash){msg.textContent="La contraseña actual no es correcta.";return}
- localStorage.setItem("fcs_custom_pass_hash",await fcsSha256(next));
+ localStorage.setItem("fcs_custom_pass_hash_v2",await fcsSha256(next));
  msg.style.color="#49df69";
  msg.textContent="Contraseña actualizada.";
  setTimeout(()=>closeModal("securityModal"),700);
@@ -2831,7 +2831,7 @@ async function changeFcsPassword(){
 
 /* V11 — LOGIN LOCAL FCS */
 const FCS_LOGIN_USER_HASH="8b3e81b172fe417a21c3cfca620ae49087178d8d2148e4d69875ab5fac368fba";
-const FCS_LOGIN_PASS_HASH="7ccc43bde1dc2f4c8d325a02c9d92c265fd9a25878d837bb14c9b64f590387fb";
+const FCS_LOGIN_PASS_HASH="8d271a9bb9c4c068a75c6d05581446bd1532f28b7a75f26cb397866c0ef7b3ab";
 async function fcsSha256(text){
  const data=new TextEncoder().encode(text);
  const digest=await crypto.subtle.digest("SHA-256",data);
@@ -2857,7 +2857,7 @@ async function fcsDoLogin(e){
  const u=(document.getElementById("fcsLoginUser")?.value||"").trim();
  const pw=document.getElementById("fcsLoginPass")?.value||"";
  const [uh,ph]=await Promise.all([fcsSha256(u),fcsSha256(pw)]);
- const activePassHash=localStorage.getItem("fcs_custom_pass_hash")||FCS_LOGIN_PASS_HASH;
+ const activePassHash=localStorage.getItem("fcs_custom_pass_hash_v2")||FCS_LOGIN_PASS_HASH;
  if(uh===FCS_LOGIN_USER_HASH && ph===activePassHash){
    if(document.getElementById("fcsRemember")?.checked)localStorage.setItem("fcs_auth_ok","1");
    else sessionStorage.setItem("fcs_auth_ok","1");
@@ -3030,7 +3030,7 @@ function fcsCloudStateRow(rows){
  states.sort((a,b)=>String(b.updated_at||"").localeCompare(String(a.updated_at||"")));
  return states[0];
 }
-const FCS_CLOUD_EXCLUDE_KEYS=new Set(["fcs_auth_ok","fcs_custom_pass_hash","fcs_lang"]);
+const FCS_CLOUD_EXCLUDE_KEYS=new Set(["fcs_auth_ok","fcs_custom_pass_hash","fcs_custom_pass_hash_v2","fcs_lang"]);
 function fcsCloudLocalData(){
  const out={};
  for(let i=0;i<localStorage.length;i++){
